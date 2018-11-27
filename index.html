@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>今天你打了多少导随？</title>
+    <script type="text/javascript" src="moment-with-locales.min.js"></script>
+</head>
+
+<body>
+    <div id="app">
+        <h1>导随每日任务计算器</h1>
+        <p><label for="target">你想打多少次导随呢：</label><input id="target" type="number" min="0" placeholder="target"></p>
+        <p><label for="count">你已经打了多少导随：</label><input id="count" type="number" min="0"></p>
+        <p><label for="end">你决定什么时候打完？</label><input id="end" type="date"></p>
+        <p>那么你需要每天打 <span id="num" class="bold">-</span> 次导随才能完成任务。</p>
+        <p id="lastday">你昨天打了 <span id="lastdayNum" class="bold">-</span> 次，今天<span id="todayNotYet" class="bold">没有完成任务！</span><span id="todayDone" class="bold">完成任务辣。</span></p>
+    </div>
+    <style type="text/css">
+    #lastdaym #todayDone {
+        display: none;
+    }
+
+    .bold {
+        font-weight: bold;
+    }
+    </style>
+    <script type="text/javascript">
+    (function() {
+        const zero = moment(0);
+        let today = moment().format("YYYY-MM-DD");
+        setInterval(() => {
+            today = moment().format("YYYY-MM-DD");
+        }, 1000);
+
+        const $target = document.querySelector("#target"),
+            $count = document.querySelector("#count"),
+            $end = document.querySelector("#end"),
+            $num = document.querySelector("#num"),
+            $lastday = document.querySelector("#lastday"),
+            $lastdayNum = document.querySelector("#lastdayNum"),
+            $todayNotYet = document.querySelector("#todayNotYet"),
+            $todayDone = document.querySelector("#todayDone");
+
+        let target, count, end, num, lastday, lastdayNum, lastQuery, lastQueryNum;
+
+        const globalChange = (e) => {
+            const tempTarget = Math.round($target.value);
+            if (Number.isNaN(tempTarget) || 0 > tempTarget || tempTarget + '' !== $target.value + '') {
+                if (e instanceof Event) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                }
+                $target.value = target || 0;
+            } else {
+                target = tempTarget;
+                $count.max = target;
+            }
+            const tempCount = Math.round($count.value);
+            if (Number.isNaN(tempCount) || 0 > tempCount || tempCount > target || tempCount + '' !== $count.value + '') {
+                if (e instanceof Event) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                }
+                $count.value = count || 0;
+            } else {
+                count = tempCount;
+            }
+            const tempEnd = moment($end.value);
+            if (!tempEnd.isValid()) {
+                if (e instanceof Event) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                }
+                $end.value = end._i || today;
+            } else {
+                end = tempEnd;
+            }
+            if (end === undefined || count === undefined) return;
+            num = +((target - count) / Math.round(moment.duration(moment(end).diff(moment(today))).asDays())).toFixed(4);
+            $num.innerText = num;
+            localStorage.setItem("target", target);
+            localStorage.setItem("end", end.format("YYYY-MM-DD"));
+            if (lastday && lastdayNum !== undefined) {
+                $lastday.style.display = "block";
+                $lastdayNum.innerText = lastdayNum;
+                $todayNotYet.style.display = count - lastdayNum < num ? "inline" : "none";
+                $todayDone.style.display = count - lastdayNum >= num ? "inline" : "none";
+                if (moment(today).diff(zero) > lastQuery.diff(zero)) {
+                    localStorage.setItem("lastdayArray", localStorage.getItem("lastQuery"));
+                }
+            } else {
+                $lastday.style.display = "none";
+            }
+            lastQuery = moment(today), lastQueryNum = count;
+            localStorage.setItem("lastQuery", JSON.stringify([lastQuery.format("YYYY-MM-DD"), lastQueryNum]));
+        };
+        [$target, $count, $end].forEach(($el) => {
+            $el.addEventListener("keydown", e => {
+                globalChange(e);
+            });
+            $el.addEventListener("keypress", e => {
+                globalChange(e);
+            });
+            $el.addEventListener("keyup", e => {
+                globalChange(e);
+            });
+            $el.addEventListener("change", e => {
+                globalChange(e);
+            });
+        });
+
+        target = Math.round(localStorage.getItem("target") || 2000);
+        if (Number.isNaN(target) || 0 > target) {
+            target = 2000;
+        }
+        $target.value = target;
+        $count.max = target;
+        end = moment(localStorage.getItem("end") || "INVALID_DATE");
+        if (!end.isValid()) {
+            end = undefined;
+        }
+        try {
+            const tempArray = JSON.parse(localStorage.getItem("lastdayArray"));
+            lastday = moment(tempArray[0]), lastdayNum = Math.round(tempArray[1]);
+            if (Number.isNaN(lastdayNum) || 0 > lastdayNum || lastdayNum > target || !lastday.isValid()) throw new Error();
+        } catch (_) {
+            lastday = undefined, lastdayNum = undefined;
+        }
+        try {
+            const temp = JSON.parse(localStorage.getItem("lastQuery"));
+            lastQuery = moment(temp[0]), lastQueryNum = Math.round(temp[1]);
+            if (Number.isNaN(lastQueryNum) || 0 > lastQueryNum || lastQueryNum > target || !lastQuery.isValid()) throw new Error();
+        } catch (_) {
+            lastQuery = undefined, lastQueryNum = undefined;
+        }
+        if (end !== undefined) {
+            $end.value = end._i;
+        }
+        if (lastQuery && lastQueryNum !== undefined) {
+            count = lastQueryNum;
+            $count.value = lastQueryNum;
+            if (!lastday && lastdayNum === undefined && moment(today).diff(zero) > lastQuery.diff(zero)) {
+                lastday = lastQuery.clone();
+                lastdayNum = lastQueryNum;
+            }
+        }
+        globalChange();
+    })();
+    </script>
+</body>
+
+</html>

@@ -46,7 +46,7 @@
 
         const globalChange = (e) => {
             const tempTarget = Math.round($target.value);
-            if (Number.isNaN(tempTarget) || 0 > tempTarget || tempTarget + '' !== $target.value + '') {
+            if (Number.isNaN(tempTarget) || 0 > tempTarget) {
                 if (e instanceof Event && e.path.includes($target)) {
                     e.preventDefault();
                     e.stopPropagation();
@@ -57,7 +57,7 @@
                 $count.max = target;
             }
             const tempCount = Math.round($count.value);
-            if (Number.isNaN(tempCount) || 0 > tempCount || tempCount > target || tempCount + '' !== $count.value + '') {
+            if (Number.isNaN(tempCount) || 0 > tempCount || tempCount > target) {
                 if (e instanceof Event && e.path.includes($count)) {
                     e.preventDefault();
                     e.stopPropagation();

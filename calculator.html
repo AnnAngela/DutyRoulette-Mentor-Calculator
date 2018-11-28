@@ -72,7 +72,7 @@
                     e.preventDefault();
                     e.stopPropagation();
                 }
-                $end.value = end._i || today;
+                if (end) $end.value = end._i;
             } else {
                 end = tempEnd;
             }

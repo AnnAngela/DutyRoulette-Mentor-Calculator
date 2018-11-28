@@ -47,32 +47,32 @@
         const globalChange = (e) => {
             const tempTarget = Math.round($target.value);
             if (Number.isNaN(tempTarget) || 0 > tempTarget || tempTarget + '' !== $target.value + '') {
-                if (e instanceof Event) {
+                if (e instanceof Event && e.path.includes($target)) {
                     e.preventDefault();
                     e.stopPropagation();
+                    $target.value = target || 2000;
                 }
-                $target.value = target || 0;
             } else {
                 target = tempTarget;
                 $count.max = target;
             }
             const tempCount = Math.round($count.value);
             if (Number.isNaN(tempCount) || 0 > tempCount || tempCount > target || tempCount + '' !== $count.value + '') {
-                if (e instanceof Event) {
+                if (e instanceof Event && e.path.includes($count)) {
                     e.preventDefault();
                     e.stopPropagation();
+                    $count.value = count || 0;
                 }
-                $count.value = count || 0;
             } else {
                 count = tempCount;
             }
             const tempEnd = moment($end.value);
             if (!tempEnd.isValid()) {
-                if (e instanceof Event) {
+                if (e instanceof Event && e.path.includes($end)) {
                     e.preventDefault();
                     e.stopPropagation();
+                    if (end) $end.value = end._i;
                 }
-                if (end) $end.value = end._i;
             } else {
                 end = tempEnd;
             }

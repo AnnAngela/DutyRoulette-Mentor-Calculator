@@ -4,6 +4,7 @@
 <head>
     <title>今天你打了多少导随？</title>
     <script type="text/javascript" src="moment-with-locales.min.js"></script>
+    <script type="text/javascript" src="jquery-3.3.1.min.js"></script>
 </head>
 
 <body>
@@ -11,142 +12,346 @@
         <h1>导随每日任务计算器</h1>
         <p><label for="target">你想打多少次导随呢：</label><input id="target" type="number" min="0" placeholder="target"></p>
         <p><label for="count">你已经打了多少导随：</label><input id="count" type="number" min="0"></p>
-        <p><label for="end">你决定什么时候打完？</label><input id="end" type="date"></p>
+        <p><label for="end">你决定什么时候打完？</label><input id="end" type="text" readonly="readonly"></p>
         <p>那么你需要每天打 <span id="num" class="bold">-</span> 次导随才能完成任务。</p>
-        <p id="lastday">你昨天打了 <span id="lastdayNum" class="bold">-</span> 次，今天<span id="todayNotYet" class="bold">没有完成任务！</span><span id="todayDone" class="bold">完成任务辣。</span></p>
+        <p id="lastday">你昨天打了 <span id="lastdayNum" class="bold">-</span> 次，今天<span id="todayNotYet"
+                class="bold">没有完成任务！</span><span id="todayDone" class="bold">完成任务辣。</span></p>
     </div>
     <style type="text/css">
-    #lastday,
-    #todayDone {
-        display: none;
-    }
+        #lastday,
+        #todayDone {
+            display: none;
+        }
 
-    .bold {
-        font-weight: bold;
-    }
+        .bold {
+            font-weight: bold;
+        }
     </style>
     <script type="text/javascript">
-    (function() {
-        const zero = moment(0);
-        let today = moment().format("YYYY-MM-DD");
-        setInterval(() => {
-            today = moment().format("YYYY-MM-DD");
-        }, 1000);
-
-        const $target = document.querySelector("#target"),
-            $count = document.querySelector("#count"),
-            $end = document.querySelector("#end"),
-            $num = document.querySelector("#num"),
-            $lastday = document.querySelector("#lastday"),
-            $lastdayNum = document.querySelector("#lastdayNum"),
-            $todayNotYet = document.querySelector("#todayNotYet"),
-            $todayDone = document.querySelector("#todayDone");
-
-        let target, count, end, num, lastday, lastdayNum, lastQuery, lastQueryNum;
-
-        const globalChange = (e) => {
-            const tempTarget = Math.round($target.value);
-            if (Number.isNaN(tempTarget) || 0 > tempTarget) {
-                if (e instanceof Event && e.path.includes($target)) {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    $target.value = target || 2000;
+        (function () {
+            "use strict";
+            class Picker {
+                constructor() {
+                    // tslint:disable-next-line:max-line-length
+                    this.picker = $(`<div class="picker_root_container"><style>.picker_root_container{position:absolute;width:12em;z-index:-999;top:-999px;left:10px;opacity:0;transition:opacity .13s ease-in-out;padding:.5rem 1rem 1rem;border:1px solid #a2a9b1;box-shadow:0 1px 1px 0 rgba(0,0,0,.1);background-color:white}.picker_root_container ::-webkit-inner-spin-button{display:none}.picker_date_year_selector{display:flex;justify-content:space-between}.picker_root_container input{border-width:0 0 1px 0;border-color:rgba(0,0,255,.3);text-align:center}#picker_date_year_editor{width:4em}.picker_date_month_selector,.picker_confirm{display:flex;justify-content:space-around}#picker_date_month_editor{width:2em}#picker_time_hour_editor{margin-right:.5em}#picker_time_hour_editor,#picker_time_minute_editor{width:3em}#picker_date_year_prev,#picker_date_year_next,#picker_date_month_prev,#picker_date_month_next{color:rgba(0,0,255,.5);cursor:pointer;user-select:none;border:1px rgba(0,0,0,0) solid;width:1.5em;border-radius:1.5em;text-align:center;transition:all .37s ease-in-out}#picker_date_year_prev:hover,#picker_date_year_next:hover,#picker_date_month_prev:hover,#picker_date_month_next:hover{border-color:rgba(0,0,0,.37)}#picker_date_day_selector{width:100%;border-collapse:separate}#picker_date_day_selector th{font-weight:normal;user-select:none}#picker_date_day_selector td{cursor:pointer;text-align:center}#picker_date_day_selector td:empty{border-bottom-color:transparent}#picker_date_day_selector td:empty:after{content:" ";display:block;height:1rem}#picker_date_day_selected{border:1px rgba(0,0,255,.3) solid !important}#picker_date_day_selector th,#picker_date_day_selector td{border-color:transparent transparent gray transparent}#picker_submit,#picker_cancel{border:1px #a2a9b1 solid;cursor:pointer;padding:0 1rem;background-color:#f8f9fa}</style><div class="picker_date_container"><div class="picker_date_year_selector"><div id="picker_date_year_prev">&lt;</div><div id="picker_date_year"> <input type="number" id="picker_date_year_editor" min="1" max="9999"></div><div id="picker_date_year_next">&gt;</div></div><div class="picker_date_month_selector"><div id="picker_date_month_prev">&lt;</div><div id="picker_date_month"> <input type="number" id="picker_date_month_editor" min="1" max="12"></div><div id="picker_date_month_next">&gt;</div></div><table id="picker_date_day_selector"><thead><tr><th>日</th><th>一</th><th>二</th><th>三</th><th>四</th><th>五</th><th>六</th></tr></thead><tbody>${`<tr><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr>`.repeat(6)}</tbody></table></div><div class="picker_confirm"><div id="picker_submit">确认</div><div id="picker_cancel">取消</div></div></div>`);
+                    this.yearEditor = this.picker.find("#picker_date_year_editor");
+                    this.monthEditor = this.picker.find("#picker_date_month_editor");
+                    this.daySelector = this.picker.find("#picker_date_day_selector");
+                    $("body").append(this.picker);
+                    $("#picker_date_year_prev").on("click", () => {
+                        this.subtractYear();
+                    });
+                    $("#picker_date_year_next").on("click", () => {
+                        this.addYear();
+                    });
+                    $("#picker_date_month_prev").on("click", () => {
+                        this.subtractMonth();
+                    });
+                    $("#picker_date_month_next").on("click", () => {
+                        this.addMonth();
+                    });
+                    $("#picker_date_day_selector").on("click", (e) => {
+                        const target = $(e.target);
+                        if (target.is("td")) {
+                            $("#picker_date_day_selected").removeAttr("id");
+                            target.attr("id", "picker_date_day_selected");
+                        }
+                    });
+                    this.picker.find("input").on("keydown", (e) => {
+                        if (!/^\d+$|^Delete$|^Backspace$/.test(e.key || "")) {
+                            return false;
+                        } else {
+                            this.generateDaySelectorTable();
+                            return true;
+                        }
+                    });
+                    $("#picker_submit").on("click", () => {
+                        if (this.originInput) {
+                            this.originInput.val(this.yearEditor.val() + "-" +
+                                this.fixNumber(this.monthEditor.val()) + "-" +
+                                this.fixNumber($("#picker_date_day_selected").text()));
+                            this.originInput.change();
+                        }
+                        $("#picker_cancel").click();
+                    });
+                    $("#picker_cancel").on("click", () => {
+                        this.originInput = undefined;
+                        this.picker.css("opacity", "0").delay(130).queue(() => {
+                            this.picker.css({
+                                "left": "10px",
+                                "top": "-999px",
+                                "z-index": "-999",
+                            });
+                            this.picker.dequeue();
+                        });
+                    });
                 }
-            } else {
-                target = tempTarget;
-                $count.max = target;
-            }
-            const tempCount = Math.round($count.value);
-            if (Number.isNaN(tempCount) || 0 > tempCount || tempCount > target) {
-                if (e instanceof Event && e.path.includes($count)) {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    $count.value = count || 0;
+                static parse(str) {
+                    const match = str.match(Picker.FORMAT);
+                    if (!match) {
+                        throw new TypeError("Wrong Format!");
+                    }
+                    const result = new Date(+match[1], +match[2] - 1, +match[3]);
+                    return result;
                 }
-            } else {
-                count = tempCount;
-            }
-            const tempEnd = moment($end.value);
-            if (!tempEnd.isValid()) {
-                if (e instanceof Event && e.path.includes($end)) {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    if (end) $end.value = end._i;
+                connectInput(input) {
+                    const now = new Date();
+                    let parseResult = input.val().match(Picker.FORMAT);
+                    if (!parseResult) {
+                        parseResult = [now.getFullYear(), now.getMonth() + 1, now.getDate()];
+                    } else {
+                        parseResult = Array.from(parseResult).slice(1).map((n, i) => {
+                            let mixed = [];
+                            switch (i) {
+                                case 0:
+                                    mixed = [1, 9999, +n];
+                                    break;
+                                case 1:
+                                    mixed = [1, 12, +n];
+                                    break;
+                                case 2:
+                                    mixed = [1, 31, +n];
+                                    break;
+                            }
+                            mixed.sort((a, b) => a - b);
+                            return mixed[1];
+                        });
+                    }
+                    this.yearEditor.val(parseResult[0]);
+                    this.monthEditor.val(parseResult[1]);
+                    this.generateDaySelectorTable();
+                    this.daySelector.find(`[data-day="${parseResult[2]}"]`).click();
+                    let top = input.offset().top;
+                    let left = input.offset().left;
+                    left -= (this.picker.width() - input.width()) / 2;
+                    const topArray = [10, top, $(document).height() - this.picker.height() - 10];
+                    const leftArray = [10, left, $(document).width() - this.picker.width() - 10];
+                    topArray.sort((a, b) => a - b);
+                    leftArray.sort((a, b) => a - b);
+                    top = topArray[1] + input.outerHeight();
+                    left = leftArray[1];
+                    this.picker.css({
+                        left,
+                        "opacity": "1",
+                        top,
+                        "z-index": "999",
+                    });
+                    this.originInput = input;
+                    return this;
                 }
-            } else {
-                end = tempEnd;
-            }
-            if (end === undefined || count === undefined) return;
-            num = +((target - count) / Math.round(moment.duration(moment(end).diff(moment(today))).asDays())).toFixed(4);
-            $num.innerText = num;
-            localStorage.setItem("target", target);
-            localStorage.setItem("end", end.format("YYYY-MM-DD"));
-            if (lastday && lastdayNum !== undefined) {
-                $lastday.style.display = "block";
-                $lastdayNum.innerText = lastdayNum;
-                $todayNotYet.style.display = count - lastdayNum < num ? "inline" : "none";
-                $todayDone.style.display = count - lastdayNum >= num ? "inline" : "none";
-                if (moment(today).diff(zero) > lastQuery.diff(zero)) {
-                    localStorage.setItem("lastdayArray", localStorage.getItem("lastQuery"));
+                addYear() {
+                    const year = +this.yearEditor.val();
+                    if (year < 9999) {
+                        this.yearEditor.val(year + 1);
+                        this.generateDaySelectorTable();
+                    }
                 }
-            } else {
-                $lastday.style.display = "none";
+                subtractYear() {
+                    const year = +this.yearEditor.val();
+                    if (year > 1) {
+                        this.yearEditor.val(year - 1);
+                        this.generateDaySelectorTable();
+                    }
+                }
+                addMonth() {
+                    const year = +this.yearEditor.val();
+                    const month = +this.monthEditor.val();
+                    if (month < 12) {
+                        this.monthEditor.val(month + 1);
+                        this.generateDaySelectorTable();
+                    } else if (year < 9999) {
+                        this.monthEditor.val(1);
+                        this.yearEditor.val(year + 1);
+                        this.generateDaySelectorTable();
+                    }
+                }
+                subtractMonth() {
+                    const year = +this.yearEditor.val();
+                    const month = +this.monthEditor.val();
+                    if (month > 1) {
+                        this.monthEditor.val(month - 1);
+                        this.generateDaySelectorTable();
+                    } else if (year > 1) {
+                        this.monthEditor.val(12);
+                        this.yearEditor.val(year - 1);
+                        this.generateDaySelectorTable();
+                    }
+                }
+                generateDaySelectorTable() {
+                    let backupDaySelected = +$("#picker_date_day_selected").text();
+                    const year = +this.yearEditor.val();
+                    const month = +this.monthEditor.val();
+                    const firstDate = new Date(year, month - 1, 1);
+                    let lastDay;
+                    if (month === 2) {
+                        if (year % 4 === 0) {
+                            lastDay = 29;
+                        } else {
+                            lastDay = 28;
+                        }
+                    } else if ([1, 3, 5, 7, 8, 10, 12].includes(month)) {
+                        lastDay = 31;
+                    } else {
+                        lastDay = 30;
+                    }
+                    if (backupDaySelected > lastDay) {
+                        backupDaySelected = lastDay;
+                    }
+                    $("#picker_date_day_selected").removeAttr("id");
+                    for (let d = -firstDate.getDay() + 1, i = 0; i < 42; d++ , i++) {
+                        const target = this.daySelector
+                            .find("tbody tr").eq(Math.floor(i / 7))
+                            .find("td").eq(i % 7);
+                        if (d < 1 || d > lastDay) {
+                            target.attr("data-day", "").text("");
+                            continue;
+                        }
+                        target.attr("data-day", d).text(d);
+                        if (d === backupDaySelected) {
+                            target.attr("id", "picker_date_day_selected");
+                        }
+                    }
+                    this.daySelector.find("tbody tr").each((_, ele) => {
+                        if (/\d/.test($(ele).text())) {
+                            $(ele).show();
+                        } else {
+                            $(ele).hide();
+                        }
+                    });
+                }
+                fixNumber(n) {
+                    if (+n < 10) {
+                        return "0" + n;
+                    } else {
+                        return "" + n;
+                    }
+                }
             }
-            lastQuery = moment(today), lastQueryNum = count;
-            localStorage.setItem("lastQuery", JSON.stringify([lastQuery.format("YYYY-MM-DD"), lastQueryNum]));
-        };
-        [$target, $count, $end].forEach(($el) => {
-            $el.addEventListener("keydown", e => {
-                globalChange(e);
-            });
-            $el.addEventListener("keypress", e => {
-                globalChange(e);
-            });
-            $el.addEventListener("keyup", e => {
-                globalChange(e);
-            });
-            $el.addEventListener("change", e => {
-                globalChange(e);
-            });
-        });
+            Picker.FORMAT = /^(\d{4})-(\d{1,2})-(\d{1,2})$/;
+            const zero = moment(0);
+            const picker = new Picker();
+            let today = moment().format("YYYY-MM-DD");
+            setInterval(() => {
+                today = moment().format("YYYY-MM-DD");
+            }, 1000);
 
-        target = Math.round(localStorage.getItem("target") || 2000);
-        if (Number.isNaN(target) || 0 > target) {
-            target = 2000;
-        }
-        $target.value = target;
-        $count.max = target;
-        end = moment(localStorage.getItem("end") || "INVALID_DATE");
-        if (!end.isValid()) {
-            end = undefined;
-        }
-        try {
-            const tempArray = JSON.parse(localStorage.getItem("lastdayArray"));
-            lastday = moment(tempArray[0]), lastdayNum = Math.round(tempArray[1]);
-            if (Number.isNaN(lastdayNum) || 0 > lastdayNum || lastdayNum > target || !lastday.isValid()) throw new Error();
-        } catch (_) {
-            lastday = undefined, lastdayNum = undefined;
-        }
-        try {
-            const temp = JSON.parse(localStorage.getItem("lastQuery"));
-            lastQuery = moment(temp[0]), lastQueryNum = Math.round(temp[1]);
-            if (Number.isNaN(lastQueryNum) || 0 > lastQueryNum || lastQueryNum > target || !lastQuery.isValid()) throw new Error();
-        } catch (_) {
-            lastQuery = undefined, lastQueryNum = undefined;
-        }
-        if (end !== undefined) {
-            $end.value = end._i;
-        }
-        if (lastQuery && lastQueryNum !== undefined) {
-            count = lastQueryNum;
-            $count.value = lastQueryNum;
-            if (!lastday && lastdayNum === undefined && moment(today).diff(zero) > lastQuery.diff(zero)) {
-                lastday = lastQuery.clone();
-                lastdayNum = lastQueryNum;
+            const $target = $("#target"),
+                $count = $("#count"),
+                $end = $("#end"),
+                $num = $("#num"),
+                $lastday = $("#lastday"),
+                $lastdayNum = $("#lastdayNum"),
+                $todayNotYet = $("#todayNotYet"),
+                $todayDone = $("#todayDone");
+
+            let target, count, end, num, lastday, lastdayNum, lastQuery, lastQueryNum;
+
+            const globalChange = (e) => {
+                const tempTarget = Math.round($target.val());
+                if (Number.isNaN(tempTarget) || 0 > tempTarget) {
+                    if (e instanceof Event && e.path.includes($target[0])) {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        $target.val(target || 2000);
+                    }
+                } else {
+                    target = tempTarget;
+                    $count.attr("max", target);
+                }
+                const tempCount = Math.round($count.val());
+                if (Number.isNaN(tempCount) || 0 > tempCount || tempCount > target) {
+                    if (e instanceof Event && e.path.includes($count[0])) {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        $count.val(count || 0);
+                    }
+                } else {
+                    count = tempCount;
+                }
+                const tempEnd = moment($end.val());
+                if (!tempEnd.isValid()) {
+                    if (e instanceof Event && e.path.includes($end[0])) {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        if (end) $end.val(end._i);
+                    }
+                } else {
+                    end = tempEnd;
+                }
+                if (end === undefined || count === undefined) return;
+                num = +((target - count) / Math.round(moment.duration(moment(end).diff(moment(today))).asDays())).toFixed(4);
+                $num.text(num);
+                localStorage.setItem("target", target);
+                localStorage.setItem("end", end.format("YYYY-MM-DD"));
+                if (lastday && lastdayNum !== undefined) {
+                    $lastday.show();
+                    $lastdayNum.text(lastdayNum);
+                    $todayNotYet[count - lastdayNum < num ? "show" : "hide"]();
+                    $todayDone[count - lastdayNum >= num ? "show" : "hide"]();
+                    if (moment(today).diff(zero) > lastQuery.diff(zero)) {
+                        localStorage.setItem("lastdayArray", localStorage.getItem("lastQuery"));
+                    }
+                } else {
+                    $lastday.hide();
+                }
+                lastQuery = moment(today), lastQueryNum = count;
+                localStorage.setItem("lastQuery", JSON.stringify([lastQuery.format("YYYY-MM-DD"), lastQueryNum]));
+            };
+            $target.add($count).add($end).on({
+                keydown: e => {
+                    globalChange(e);
+                },
+                keypress: e => {
+                    globalChange(e);
+                },
+                keyup: e => {
+                    globalChange(e);
+                },
+                change: e => {
+                    globalChange(e);
+                },
+            });
+            $end.on("click", () => {
+                picker.connectInput($end);
+            });
+
+            target = Math.round(localStorage.getItem("target") || 2000);
+            if (Number.isNaN(target) || 0 > target) {
+                target = 2000;
             }
-        }
-        globalChange();
-    })();
+            $target.val(target);
+            $count.attr("max", target);
+            end = moment(localStorage.getItem("end") || "INVALID_DATE");
+            if (!end.isValid()) {
+                end = undefined;
+            }
+            try {
+                const tempArray = JSON.parse(localStorage.getItem("lastdayArray"));
+                lastday = moment(tempArray[0]), lastdayNum = Math.round(tempArray[1]);
+                if (Number.isNaN(lastdayNum) || 0 > lastdayNum || lastdayNum > target || !lastday.isValid()) throw new Error();
+            } catch (_) {
+                lastday = undefined, lastdayNum = undefined;
+            }
+            try {
+                const temp = JSON.parse(localStorage.getItem("lastQuery"));
+                lastQuery = moment(temp[0]), lastQueryNum = Math.round(temp[1]);
+                if (Number.isNaN(lastQueryNum) || 0 > lastQueryNum || lastQueryNum > target || !lastQuery.isValid()) throw new Error();
+            } catch (_) {
+                lastQuery = undefined, lastQueryNum = undefined;
+            }
+            if (end !== undefined) {
+                $end.val(end._i);
+            }
+            if (lastQuery && lastQueryNum !== undefined) {
+                count = lastQueryNum;
+                $count.val(lastQueryNum);
+                if (!lastday && lastdayNum === undefined && moment(today).diff(zero) > lastQuery.diff(zero)) {
+                    lastday = lastQuery.clone();
+                    lastdayNum = lastQueryNum;
+                }
+            }
+            globalChange();
+        })();
     </script>
 </body>
 
